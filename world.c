@@ -182,7 +182,28 @@ void World_DrawLines(Vec3 *lines, int num){
 
 	glBindVertexArray(0);
 }
-
+void World_DrawSkeleton(BoundingBox *bb){
+	Vec3 lines[18]; 
+	lines[0] = bb->points[0];
+	lines[1] = bb->points[1];
+	lines[2] = bb->points[2];
+	lines[3] = bb->points[3];
+	lines[4] = bb->points[0];
+	lines[5] = bb->points[4];
+	lines[6] = bb->points[5];
+	lines[7] = bb->points[6];
+	lines[8] = bb->points[7];
+	lines[9] = bb->points[4];
+	lines[10] = bb->points[7];
+	lines[11] = bb->points[3];
+	lines[12] = bb->points[7];
+	lines[13] = bb->points[6];
+	lines[14] = bb->points[2];
+	lines[15] = bb->points[6];
+	lines[16] = bb->points[5];
+	lines[17] = bb->points[1];
+	World_DrawLines(lines, 18);
+}
 void World_DrawSAT(BoundingBox *bb){
 	Vec3 lines[18]; 
     // bb->points[0] = (Vec3){0, 1, 1};
@@ -219,24 +240,7 @@ void World_DrawSAT(BoundingBox *bb){
 	lines[15] = bb->points[4];
 	lines[16] = bb->points[5];
 	lines[17] = bb->points[7];
-	// lines[0] = bb->points[0];
-	// lines[1] = bb->points[1];
-	// lines[2] = bb->points[2];
-	// lines[3] = bb->points[3];
-	// lines[4] = bb->points[0];
-	// lines[5] = bb->points[4];
-	// lines[6] = bb->points[5];
-	// lines[7] = bb->points[6];
-	// lines[8] = bb->points[7];
-	// lines[9] = bb->points[4];
-	// lines[10] = bb->points[7];
-	// lines[11] = bb->points[3];
-	// lines[12] = bb->points[7];
-	// lines[13] = bb->points[6];
-	// lines[14] = bb->points[2];
-	// lines[15] = bb->points[6];
-	// lines[16] = bb->points[5];
-	// lines[17] = bb->points[1];
+
     World_DrawLines(lines, 18);
 }
 

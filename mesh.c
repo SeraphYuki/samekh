@@ -196,12 +196,20 @@ static void BoneUpdate(Bone *bone, PlayingAnimation *anims, int nAnims, Vec4 *ma
 
     Math_TranslateMatrix(matrix, pos);
     Math_MatrixFromQuat(rot, bone->absMatrix);
-    Math_MatrixMatrixMult(bone->absMatrix, matrix, bone->absMatrix);
 
-    if(bone->parent)
+    Math_MatrixMatrixMult(bone->absMatrix, matrix, bone->absMatrix);
+    if(bone->parent){
         Math_MatrixMatrixMult(bone->absMatrix, bone->parent->absMatrix, bone->absMatrix); 
+	}
 
     Math_MatrixMatrixMult(matrix, bone->absMatrix, bone->invBindMatrix);
+
+    bone->axes[0] = (Vec3){1,0,0};
+    bone->axes[1] = (Vec3){0,1,0};
+    bone->axes[2] = (Vec3){0,0,1};
+    bone->axes[0] = Math_Vec3Normalize(Math_MatrixMult(bone->axes[0], bone->absMatrix));
+    bone->axes[1] = Math_Vec3Normalize(Math_MatrixMult(bone->axes[1], bone->absMatrix));
+    bone->axes[2] = Math_Vec3Normalize(Math_MatrixMult(bone->axes[2], bone->absMatrix));
 
     bone->points[0] = (Vec3){bone->cube.x, bone->cube.y, bone->cube.z};
     bone->points[1] = (Vec3){bone->cube.x+bone->cube.w, bone->cube.y, bone->cube.z};
@@ -211,13 +219,6 @@ static void BoneUpdate(Bone *bone, PlayingAnimation *anims, int nAnims, Vec4 *ma
     bone->points[5] = (Vec3){bone->cube.x+bone->cube.w, bone->cube.y, bone->cube.z+bone->cube.d};
     bone->points[6] = (Vec3){bone->cube.x+bone->cube.w, bone->cube.y+bone->cube.h, bone->cube.z+bone->cube.d};
     bone->points[7] = (Vec3){bone->cube.x, bone->cube.y+bone->cube.h, bone->cube.z+bone->cube.d};
-
-    bone->axes[0] = (Vec3){1,0,0};
-    bone->axes[1] = (Vec3){0,1,0};
-    bone->axes[2] = (Vec3){0,0,1};
-    bone->axes[0] = Math_Vec3Normalize(Math_MatrixMult(bone->axes[0], matrix));
-    bone->axes[1] = Math_Vec3Normalize(Math_MatrixMult(bone->axes[1], matrix));
-    bone->axes[2] = Math_Vec3Normalize(Math_MatrixMult(bone->axes[2], matrix));
 
     bone->points[0] = Math_MatrixMult(bone->points[0], bone->absMatrix);
     bone->points[1] = Math_MatrixMult(bone->points[1], bone->absMatrix);
@@ -611,10 +612,10 @@ static void LoadSkeleton(Skeleton *skeleton, FILE *fp){
         fread(&bone->pos, 1, sizeof(Vec3), fp);
         fread(&bone->rot, 1, sizeof(Quat), fp);
         fread(&bone->cube, 1, sizeof(Cube), fp);
-
         if(parentIndex >= 0){
 
             bone->parent = &skeleton->bones[parentIndex];
+
 
             if(bone->parent->nChildren < BONE_MAX_CHILDREN)
                 bone->parent->children[bone->parent->nChildren++] = bone;

@@ -22,6 +22,7 @@ void World_ResolveCollisions(Object *obj, BoundingBox *box);
 Vec3 World_GetTopLeft();
 void World_Free();
 void World_Clear();
+void World_DrawSkeleton(BoundingBox *bb);
 void World_DrawObject(Object *object);
 void World_AddOffScreenUpdatedObject(Object *obj);
 void World_RemoveOffScreenUpdatedObject(Object *obj);

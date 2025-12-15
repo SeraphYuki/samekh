@@ -26,7 +26,7 @@ int Window_Open(const char *title, int posx, int posy, int width, int height, in
     SDL_Init(SDL_INIT_GAMECONTROLLER);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
 
     int k;
     for(k = 0; k < SDL_NumJoysticks(); k++){

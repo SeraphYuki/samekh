@@ -31,6 +31,7 @@ void BoundingBox_Rotate(BoundingBox *bb, Vec3 rot);
 void BoundingBox_Scale(BoundingBox *bb, Vec3 scale);
 void BoundingBox_SetPos(BoundingBox *bb, Vec3 pos);
 void BoundingBox_UpdatePoints(BoundingBox *bb);
+void BoundingBox_UpdateWorldSpaceCube(BoundingBox *bb);
 
 BoundingBox BoundingBox_Create(Cube cube, Vec3 pos);
 

@@ -6,12 +6,13 @@
 #include "image_loader.h"
 #include "shaders.h"
 #include "object.h"
+#include "phsyics.h"
 // #include "skybox.h"
-#define WINDOW_WIDTH 480*2 
-#define WINDOW_HEIGHT 272*2
+#define WINDOW_WIDTH 960 
+#define WINDOW_HEIGHT 544
 
-static Object *nepObj, *cubeObj, *groundObj;
-static Model cubeModel, groundModel;
+static Object *cubeObj, *groundObj, *throwObj;
+static Model cubeModel, groundModel, throwModel;
 static Animation cubeAnim;
 static Skeleton cubeSkel;
 static PlayingAnimation cubeAnims[1];
@@ -22,32 +23,46 @@ static float mouseSensitivity = 0.001;
 static float moveSpeed = 0.005;
 
 static Vec2 rotation = {0,0};
-static Vec3 position = {0,1,10};
+static Vec3 position = {2,1,5};
 
-static char movingDirs[4];
-static Image test;
+static char movingDirs[5];
 
-static void SetObjectsPos(Object *obj, Vec3 pos, Vec3 rotation);
 
 float GetDeltaTime(void){
     return Window_GetDeltaTime();
+}
+static void onThrow(Object *obj, Object *obj2, BoundingBox *bb, BoundingBox *bb2, Vec3 axis, float overlap){
+	obj->bb.pos = Math_Vec3AddVec3(obj->bb.pos,Math_Vec3MultFloat(axis, -overlap));
+	Vec3 satAxis;
+	float satOverlap = 0;
+	if(Object_SkeletonCollision(&obj->bb, &obj2->skelBb, &satAxis, &satOverlap)){
+		obj->bb.pos = Math_Vec3AddVec3(obj->bb.pos,Math_Vec3MultFloat(satAxis, -satOverlap));
+	}
+	obj->ObjUpdate(obj);
+}
+static void onCube(Object *obj, Object *obj2, BoundingBox *bb, BoundingBox *bb2, Vec3 axis, float overlap){
+	obj->bb.pos = Math_Vec3AddVec3(obj->bb.pos,Math_Vec3MultFloat(axis, -overlap));
+	obj->ObjUpdate(obj);	
 }
 
 static void Update(){
 
     cubeAnims[0].into += Window_GetDeltaTime() / 10.1f;
 
-    if(cubeAnims[0].into >= cubeAnim.length){
-        cubeAnims[0].into = 0;
+    if(cubeAnims[0].into > cubeAnim.length/1.5){
+        cubeAnims[0].into = cubeAnim.length/8;
 	}
 
     cubeObj->bb.pos.y -= Window_GetDeltaTime() / 1000.0f;
-    if(cubeObj->bb.pos.y < 0.7)
-        cubeObj->bb.pos.y = 0.7;
-	Skeleton_Update(&cubeSkel, cubeAnims, 1);
+    if(cubeObj->bb.pos.y < 0){
+        cubeObj->bb.pos.y = 0;
+	}
 
+	Skeleton_Update(&cubeSkel, cubeAnims, 1);
+	Object_UpdateSkeleton(cubeObj, &cubeSkel);
 	Vec3 moveVec = {0,0,0};
 
+    if(movingDirs[4]) moveVec.y += 1;
 	if(movingDirs[0]) moveVec.z -= 1;
 	if(movingDirs[1]) moveVec.z += 1;
 	if(movingDirs[2]) moveVec.x -= 1;
@@ -65,11 +80,24 @@ static void Update(){
         // position.z += moveVec.z;
         cubeObj->bb.pos.x += moveVec.x;
         cubeObj->bb.pos.z += moveVec.z;
+        cubeObj->bb.pos.y += moveVec.y;
     }
+
     cubeObj->ObjUpdate(cubeObj);
+	cubeObj->OnCollision = onCube;
     World_UpdateObjectInOctree(cubeObj);
     World_ResolveCollisions(cubeObj, &cubeObj->bb);
+    cubeObj->ObjUpdate(cubeObj);
 
+	float thrown = GetDeltaTime() / 500.0f;
+    Vec3 forward = Math_Rotate((Vec3){0,0,-1}, (Vec3){-rotation.y, -rotation.x, 0});
+	throwObj->bb.pos.x += thrown * forward.x;
+	throwObj->bb.pos.y += thrown * forward.y;
+	throwObj->bb.pos.z += thrown * forward.z;
+	if(Math_Vec3Magnitude(Math_Vec3SubVec3(throwObj->bb.pos,position)) > 5) throwObj->bb.pos = position;
+    throwObj->OnCollision = onThrow;
+    throwObj->ObjUpdate(throwObj);
+    World_ResolveCollisions(throwObj, &throwObj->bb);
 }
 
 static void Event(SDL_Event ev){
@@ -99,6 +127,8 @@ static void Event(SDL_Event ev){
 
         if(ev.key.keysym.sym == SDLK_w)
             movingDirs[0] = 1;
+        if(ev.key.keysym.sym == SDLK_q)
+            movingDirs[4] = 1;
 		else if(ev.key.keysym.sym == SDLK_s)
 			movingDirs[1] = 1;
 		else if(ev.key.keysym.sym == SDLK_a)
@@ -110,9 +140,11 @@ static void Event(SDL_Event ev){
 
 	} else if(ev.type == SDL_KEYUP){
 
-		if(ev.key.keysym.sym == SDLK_w)
-			movingDirs[0] = 0;
-		else if(ev.key.keysym.sym == SDLK_s)
+        if(ev.key.keysym.sym == SDLK_w)
+            movingDirs[0] = 0;
+        if(ev.key.keysym.sym == SDLK_q)
+            movingDirs[4] = 0;
+        else if(ev.key.keysym.sym == SDLK_s)
 			movingDirs[1] = 0;
 		else if(ev.key.keysym.sym == SDLK_a)
 			movingDirs[2] = 0;
@@ -132,17 +164,14 @@ static void Focus(){
 
 static void DrawRigged(Object *obj){
 
-    int currProgram = Shaders_GetProgram(SKELETAL_ANIMATION_SHADER);
 
     Shaders_UseProgram(SKELETAL_ANIMATION_SHADER);
    
     Shaders_SetModelMatrix(obj->bb.matrix);
     Shaders_UpdateModelMatrix();
 
-    // Skeleton_Update(&cubeSkel, cubeAnims, 1);
     
-    
-    glUniform4fv(Shaders_GetBonesLocation(), cubeSkel.nBones * 3, &cubeSkel.matrices[0].x);
+    glUniform4fv(Shaders_GetBonesLocation(), obj->skeleton->nBones * 3, &obj->skeleton->matrices[0].x);
 
 
     glActiveTexture(GL_TEXTURE0);
@@ -211,83 +240,18 @@ static char Draw(){
     Shaders_UpdateProjectionMatrix();
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    Math_Identity(cubeObj->matrix);
-    Shaders_SetModelMatrix(cubeObj->matrix);
-    Shaders_UpdateModelMatrix();
-    Shaders_UpdateModelMatrix();
 
     glCullFace(GL_BACK);
-
-    World_Render(1);
-	Vec3 axes[3] = {(Vec3){1,0,0}, (Vec3){0,1,0}, (Vec3){0,0,1}};
-	
-	Vec3 points[8];    
-	
-	static float thrown = 3;
-	thrown += GetDeltaTime() / 1000.0f;
-	if(thrown > 6) thrown = 3;
-	
-	Cube cube = (Cube){position.x,position.y,position.z,0.5,0.5,0.5};
-	cube.x += thrown * forward.x;
-	cube.y += thrown * forward.y;
-	cube.z += thrown * forward.z;
-	points[0] = (Vec3){cube.x, cube.y, cube.z};
-	points[1] = (Vec3){cube.x+cube.w, cube.y, cube.z};
-	points[2] = (Vec3){cube.x+cube.w, cube.y+cube.h, cube.z};
-	points[3] = (Vec3){cube.x, cube.y+cube.h, cube.z};
-	points[4] = (Vec3){cube.x, cube.y, cube.z+cube.d};
-	points[5] = (Vec3){cube.x+cube.w, cube.y, cube.z+cube.d};
-	points[6] = (Vec3){cube.x+cube.w, cube.y+cube.h, cube.z+cube.d};
-	points[7] = (Vec3){cube.x, cube.y+cube.h, cube.z+cube.d};
- 
-   Vec3 lines[18]; 
-    int k;
-    for(k = 0; k < cubeSkel.nBones; k++){
-        lines[0] = (Vec3){cubeSkel.bones[k].points[0].x, cubeSkel.bones[k].points[0].y, cubeSkel.bones[k].points[0].z};
-        lines[1] = (Vec3){cubeSkel.bones[k].points[1].x, cubeSkel.bones[k].points[1].y, cubeSkel.bones[k].points[1].z};
-        lines[2] = (Vec3){cubeSkel.bones[k].points[2].x, cubeSkel.bones[k].points[2].y, cubeSkel.bones[k].points[2].z};
-        lines[3] = (Vec3){cubeSkel.bones[k].points[3].x, cubeSkel.bones[k].points[3].y, cubeSkel.bones[k].points[3].z};
-        lines[4] = (Vec3){cubeSkel.bones[k].points[0].x, cubeSkel.bones[k].points[0].y, cubeSkel.bones[k].points[0].z};
-        lines[5] = (Vec3){cubeSkel.bones[k].points[4].x, cubeSkel.bones[k].points[4].y, cubeSkel.bones[k].points[4].z};
-        lines[6] = (Vec3){cubeSkel.bones[k].points[5].x, cubeSkel.bones[k].points[5].y, cubeSkel.bones[k].points[5].z};
-        lines[7] = (Vec3){cubeSkel.bones[k].points[6].x, cubeSkel.bones[k].points[6].y, cubeSkel.bones[k].points[6].z};
-        lines[8] = (Vec3){cubeSkel.bones[k].points[7].x, cubeSkel.bones[k].points[7].y, cubeSkel.bones[k].points[7].z};
-        lines[9] = (Vec3){cubeSkel.bones[k].points[4].x, cubeSkel.bones[k].points[4].y, cubeSkel.bones[k].points[4].z};
-        lines[10] = (Vec3){cubeSkel.bones[k].points[7].x, cubeSkel.bones[k].points[7].y, cubeSkel.bones[k].points[7].z};
-        lines[11] = (Vec3){cubeSkel.bones[k].points[3].x, cubeSkel.bones[k].points[3].y, cubeSkel.bones[k].points[3].z};
-        lines[12] = (Vec3){cubeSkel.bones[k].points[7].x, cubeSkel.bones[k].points[7].y, cubeSkel.bones[k].points[7].z};
-        lines[13] = (Vec3){cubeSkel.bones[k].points[6].x, cubeSkel.bones[k].points[6].y, cubeSkel.bones[k].points[6].z};
-        lines[14] = (Vec3){cubeSkel.bones[k].points[2].x, cubeSkel.bones[k].points[2].y, cubeSkel.bones[k].points[2].z};
-        lines[15] = (Vec3){cubeSkel.bones[k].points[6].x, cubeSkel.bones[k].points[6].y, cubeSkel.bones[k].points[6].z};
-        lines[16] = (Vec3){cubeSkel.bones[k].points[5].x, cubeSkel.bones[k].points[5].y, cubeSkel.bones[k].points[5].z};
-        lines[17] = (Vec3){cubeSkel.bones[k].points[1].x, cubeSkel.bones[k].points[1].y, cubeSkel.bones[k].points[1].z};
+    float idenity[16];
+    Shaders_UseProgram(TEXTURED_SHADER);
     
-        glLineWidth(3);
-
-
-        // if(SAT_Collision(cubeSkel.bones[k].points, points, cubeSkel.bones[k].axes, axes) > 0){
-        //     World_DrawLines(lines, 18);
-        // }
-    }
-	lines[0] = (Vec3){points[0].x, points[0].y, points[0].z};
-	lines[1] = (Vec3){points[1].x, points[1].y, points[1].z};
-	lines[2] = (Vec3){points[2].x, points[2].y, points[2].z};
-	lines[3] = (Vec3){points[3].x, points[3].y, points[3].z};
-	lines[4] = (Vec3){points[0].x, points[0].y, points[0].z};
-	lines[5] = (Vec3){points[4].x, points[4].y, points[4].z};
-	lines[6] = (Vec3){points[5].x, points[5].y, points[5].z};
-	lines[7] = (Vec3){points[6].x, points[6].y, points[6].z};
-	lines[8] = (Vec3){points[7].x, points[7].y, points[7].z};
-	lines[9] = (Vec3){points[4].x, points[4].y, points[4].z};
-	lines[10] = (Vec3){points[7].x, points[7].y, points[7].z};
-	lines[11] = (Vec3){points[3].x, points[3].y, points[3].z};
-	lines[12] = (Vec3){points[7].x, points[7].y, points[7].z};
-	lines[13] = (Vec3){points[6].x, points[6].y, points[6].z};
-	lines[14] = (Vec3){points[2].x, points[2].y, points[2].z};
-	lines[15] = (Vec3){points[6].x, points[6].y, points[6].z};
-	lines[16] = (Vec3){points[5].x, points[5].y, points[5].z};
-	lines[17] = (Vec3){points[1].x, points[1].y, points[1].z};
-	World_DrawLines(lines, 18);
+    Math_Identity(idenity);
+    Shaders_SetModelMatrix(idenity);
+	int k;
+	for(k = 0; k < cubeObj->skelBb.numChildren; k++){
+		World_DrawSkeleton(&cubeObj->skelBb.children[k]);
+	}
+    World_Render(1);
     return 1;
 }
 
@@ -337,14 +301,16 @@ int main(int argc, char **argv){
     cubeObj = Object_Create();
 	cubeObj->skeleton = &cubeSkel;
 	memcpy(cubeObj->matrix, Math_Identity, sizeof(Math_Identity));
-    RiggedModel_Load(&cubeModel, &cubeSkel, "Resources/test.yuk");
+    RiggedModel_Load(&cubeModel, &cubeSkel, "Resources/figure.yuk");
     memset(&cubeAnim, 0, sizeof(Animation));
-    Animation_Load(&cubeAnim, "Resources/test_ArmatureAction.anm");
+    Animation_Load(&cubeAnim, "Resources/figure_ArmatureAction.anm");
 
 	Object_SetModel(cubeObj, &cubeModel);
     cubeObj->Draw = DrawRigged;
     cubeObj->AddUser(cubeObj);
-    cubeObj->bb.pos.y = 2;
+    cubeObj->bb.pos.y = 1;
+    cubeObj->bb.scale = (Vec3){0.1,0.1,0.1};
+    cubeObj->bb.rot = (Vec3){0,0,0};
     World_UpdateObjectInOctree(cubeObj);
 
 	groundObj = Object_Create();
@@ -354,6 +320,13 @@ int main(int argc, char **argv){
     groundObj->Draw = DrawModel;
     groundObj->AddUser(groundObj);
     World_UpdateObjectInOctree(groundObj);
+	throwObj = Object_Create();
+    Model_Load(&throwModel, "Resources/cube.yuk");
+	Object_SetModel(throwObj, &throwModel);
+    throwObj->Draw = DrawModel;
+	throwObj->bb.pos = position;
+    throwObj->AddUser(throwObj);
+    World_UpdateObjectInOctree(throwObj);
 
     cubeAnims[0] = (PlayingAnimation){
         .active = 1,

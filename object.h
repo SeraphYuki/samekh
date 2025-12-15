@@ -2,7 +2,6 @@
 #define OBJECT_DEF
 
 #include "bounding_box.h"
-// #include "image_loader.h"
 #include "math.h"
 #include "game.h"
 #include "mesh.h"
@@ -15,6 +14,8 @@ typedef struct {
 	Object *obj2;
 	BoundingBox *bb1;
 	BoundingBox *bb2;
+	Vec3 axis;
+	float overlap;
 } Collision;
 
 struct Object {
@@ -22,7 +23,7 @@ struct Object {
 	void (*Free)(Object *this);
 	void (*AddUser)(Object *this);
 	void (*RemoveUser)(Object *this);
-	void (*OnCollision)(Object *this, Object *obj2, BoundingBox *bb1, BoundingBox *bb2);
+	void (*OnCollision)(Object *this, Object *obj2, BoundingBox *bb1, BoundingBox *bb2, Vec3 axis, float overlap);
 	void (*Update)(Object *this);
 	void (*Draw)(Object *this);
 	void (*ObjUpdate)(Object *this);
@@ -43,7 +44,7 @@ struct Object {
 	int shader;
 
 	BoundingBox bb;
-
+	BoundingBox skelBb;
 	char frozen;
 	
 	char offScreenUpdated;
@@ -61,6 +62,9 @@ struct Object {
 
 Object *Object_Create();
 Object *Object_Copy(Object *obj);
+void Object_UpdateSkeleton(Object *obj, Skeleton *skel);
+
+int Object_SkeletonCollision(BoundingBox *bb1, BoundingBox *bb2, Vec3 *axis, float *overlap);
 void Object_Free(Object *obj);
 void Object_Freeze(Object *obj);
 void Object_SetModel(Object *obj, Model *model);

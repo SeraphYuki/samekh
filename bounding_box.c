@@ -178,7 +178,8 @@ void BoundingBox_FreeData(BoundingBox *bb){
 				for(j = k; j < bb->parent->numChildren-1; j++)
 					bb->parent->children[j] = bb->parent->children[j+1];
 			
-				bb->parent->children = (BoundingBox *)realloc(bb->parent->children, sizeof(BoundingBox) * --bb->parent->numChildren);
+				bb->parent->children = (BoundingBox *)realloc(bb->parent->children, 
+					sizeof(BoundingBox) * --bb->parent->numChildren);
 			
 				break;
 			}
@@ -245,6 +246,7 @@ int BoundingBox_CheckCollision(BoundingBox *bb, BoundingBox *bb2){
 
 
 	int ret = 0;
+	if(!Math_CheckCollisionCube(bb->wsCube, bb2->wsCube)) return ret;
 
 	int k;
     for(k = 0; k < bb->numChildren; k++){
@@ -253,7 +255,6 @@ int BoundingBox_CheckCollision(BoundingBox *bb, BoundingBox *bb2){
     for(k = 0; k < bb2->numChildren; k++){
     	ret += BoundingBox_CheckCollision(bb, &bb2->children[k]);
 	}
-	if(!Math_CheckCollisionCube(bb->wsCube, bb2->wsCube)) return ret;
 
 	return ret+1;
 }
@@ -261,7 +262,11 @@ int BoundingBox_CheckCollision(BoundingBox *bb, BoundingBox *bb2){
 int BoundingBox_ResolveCollision(Object *obj1, BoundingBox *bb, Object *obj2, BoundingBox *bb2){
 
 
+	// children not iterative. need checking for each pair
+
 	int ret = 0;
+	if(!Math_CheckCollisionCube(bb->wsCube, bb2->wsCube))
+		return ret;
 
 	int k;
     for(k = 0; k < bb->numChildren; k++){
@@ -271,38 +276,59 @@ int BoundingBox_ResolveCollision(Object *obj1, BoundingBox *bb, Object *obj2, Bo
     	ret += BoundingBox_ResolveCollision(obj1, bb, obj2, &bb2->children[k]);
 	}
 
-	if(!Math_CheckCollisionCube(bb->wsCube, bb2->wsCube))
-		return ret;
 
+	Vec3 axis;
+	float overlap = 0;
 	if(BoundingBox_IsSAT(bb) || BoundingBox_IsSAT(bb2)){
-		Vec3 axis;
-		float overlap = 0;
 		if(!BoundingBox_SATCollision(bb, bb2, &overlap, &axis)){
 			return ret;	
 		}
-		obj1->bb.pos = Math_Vec3AddVec3(obj1->bb.pos,Math_Vec3MultFloat(axis,-overlap));
-		obj1->ObjUpdate(obj1);
 	}
-	
+
 	if(obj1 && (obj1->storeLastCollisions || obj1->OnCollision)){
 		
-		if(obj1->OnCollision) obj1->OnCollision(obj1, obj2, bb, bb2);
+		if(obj1->OnCollision) obj1->OnCollision(obj1, obj2, bb, bb2, axis, overlap);
 		
 		if(obj1->storeLastCollisions){
 			obj1->lastCollisions = (Collision *)realloc(obj1->lastCollisions, sizeof(Collision) * ++obj1->nLastCollisions);
-			obj1->lastCollisions[obj1->nLastCollisions-1] = (Collision){obj1, obj2, bb, bb2};
+			obj1->lastCollisions[obj1->nLastCollisions-1] = (Collision){obj1, obj2, bb, bb2,axis,overlap};
 		}
 	}
 
-	if(obj2 && obj2->storeLastCollisions){
-
+	if(obj2 && (obj2->storeLastCollisions || obj2->OnCollision)){
+		if(obj2->OnCollision) obj2->OnCollision(obj2, obj1, bb2, bb, axis, overlap);
 		if(obj2->storeLastCollisions){
 			obj2->lastCollisions = (Collision *)realloc(obj2->lastCollisions, sizeof(Collision) * ++obj2->nLastCollisions);
-			obj2->lastCollisions[obj2->nLastCollisions-1] = (Collision){obj2, obj1, bb2, bb};
+			obj2->lastCollisions[obj2->nLastCollisions-1] = (Collision){obj2, obj1, bb2, bb,axis,overlap};
 		}
 	}
 
     return ret+1;
+}
+void BoundingBox_UpdateWorldSpaceCube(BoundingBox *bb){
+	bb->wsCube.x = bb->wsCube.y = bb->wsCube.z = HUGE_VAL;
+	bb->wsCube.w = bb->wsCube.h = bb->wsCube.d = -HUGE_VAL;
+
+	int k;
+	for(k = 0; k < 8; k++){
+		Vec3 pos = bb->points[k];
+        if(pos.x < bb->wsCube.x)
+            bb->wsCube.x = pos.x;
+        if(pos.x > bb->wsCube.w)
+            bb->wsCube.w = pos.x;
+        if(pos.y < bb->wsCube.y)
+            bb->wsCube.y = pos.y;
+        if(pos.y > bb->wsCube.h)
+            bb->wsCube.h = pos.y;
+        if(pos.z < bb->wsCube.z)
+            bb->wsCube.z = pos.z;
+        if(pos.z >  bb->wsCube.d)
+            bb->wsCube.d = pos.z;
+    }
+ 
+	bb->wsCube.w -= bb->wsCube.x;
+    bb->wsCube.h -= bb->wsCube.y;
+    bb->wsCube.d -= bb->wsCube.z;
 }
 
 void BoundingBox_UpdatePoints(BoundingBox *bb){
@@ -311,7 +337,6 @@ void BoundingBox_UpdatePoints(BoundingBox *bb){
     bb->points[1] = (Vec3){bb->cube.x, bb->cube.y, bb->cube.z+bb->cube.d};
     bb->points[2] = (Vec3){bb->cube.x, bb->cube.y+bb->cube.h, bb->cube.z};
     bb->points[3] = (Vec3){bb->cube.x, bb->cube.y, bb->cube.z};
-
     bb->points[4] = (Vec3){bb->cube.x+bb->cube.w, bb->cube.y+bb->cube.h, bb->cube.z+bb->cube.d};
     bb->points[5] = (Vec3){bb->cube.x+bb->cube.w, bb->cube.y, bb->cube.z+bb->cube.d};
     bb->points[6] = (Vec3){bb->cube.x+bb->cube.w, bb->cube.y+bb->cube.h, bb->cube.z};
@@ -346,30 +371,9 @@ void BoundingBox_UpdatePoints(BoundingBox *bb){
     bb->points[6] = Math_MatrixMult(bb->points[6], bb->matrix);
     bb->points[7] = Math_MatrixMult(bb->points[7], bb->matrix);
 
-	bb->wsCube.x = bb->wsCube.y = bb->wsCube.z = HUGE_VAL;
-	bb->wsCube.w = bb->wsCube.h = bb->wsCube.d = -HUGE_VAL;
+	BoundingBox_UpdateWorldSpaceCube(bb);
 
-	int k;
-	for(k = 0; k < 8; k++){
-		Vec3 pos = bb->points[k];
-        if(pos.x < bb->wsCube.x)
-            bb->wsCube.x = pos.x;
-        if(pos.x > bb->wsCube.w)
-            bb->wsCube.w = pos.x;
-        if(pos.y < bb->wsCube.y)
-            bb->wsCube.y = pos.y;
-        if(pos.y > bb->wsCube.h)
-            bb->wsCube.h = pos.y;
-        if(pos.z < bb->wsCube.z)
-            bb->wsCube.z = pos.z;
-        if(pos.z >  bb->wsCube.d)
-            bb->wsCube.d = pos.z;
-    }
- 
-	bb->wsCube.w -= bb->wsCube.x;
-    bb->wsCube.h -= bb->wsCube.y;
-    bb->wsCube.d -= bb->wsCube.z;
-	
+	int k;	
 	if(bb->children){
 		for(k = 0; k < bb->numChildren; k++)
 			BoundingBox_UpdatePoints(&bb->children[k]);
