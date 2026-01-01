@@ -10,75 +10,76 @@
 #define PI 3.14159265359
 
 typedef struct {
-    float x;
-    float y;
+	  float x;
+	  float y;
 } Vec2;
 
 typedef struct {
-    float a;
-    float b;
-    float c;
-    float d;
+	  float a;
+	  float b;
+	  float c;
+	  float d;
 } Plane;
 
 typedef struct {
-    float x;
-    float y;
-    float z;
+	  float x;
+	  float y;
+	  float z;
 } Vec3;
 
+
 typedef struct {
-    float x;
-    float y;
-    float z;
-    float w;
+	  float x;
+	  float y;
+	  float z;
+	  float w;
 } Vec4;
 
 typedef struct {
-    float x;
-    float y;
-    float z;
-    float w;
+	  float x;
+	  float y;
+	  float z;
+	  float w;
 } Quat;
 
 typedef struct {
-    Vec2 pos;
-    Vec2 line;
+	  Vec2 pos;
+	  Vec2 line;
 } Ray;
 
 typedef struct {
-    float x;
-    float y;
-    float z;
-    float w;
-    float h;
+	  float x;
+	  float y;
+	  float z;
+	  float w;
+	  float h;
 } Rect;
 
 typedef struct {
-    float x;
-    float y;
-    float z;
-    float w;
-    float h;
-    float d;
+	  float x;
+	  float y;
+	  float z;
+	  float w;
+	  float h;
+	  float d;
 } Cube;
 
 typedef struct {
-    float x;
-    float y;
-    float w;
-    float h;
+	  float x;
+	  float y;
+	  float w;
+	  float h;
 } Rect2D;
 
 typedef struct {
-    float mag;
-    Quat quat;
+	  float mag;
+	  Quat quat;
 } Joint;
 
 typedef struct {
-    Joint *joints;
-    int nJoints;
-    Vec3 basePos;
+	  Joint *joints;
+	  int nJoints;
+	  Vec3 basePos;
 } Arm;
 
  char Math_Vec2EqualToVec2(Vec2 v1, Vec2 v2);
@@ -131,7 +132,7 @@ typedef struct {
  Rect2D Math_RoundRect2D(Rect2D r);
  Rect Math_RoundRect(Rect r);
  char Math_CheckCollisionRect(Rect r1, Rect r);
-  char Math_CheckCollisionRect2D(Rect2D r1, Rect2D r);
+	char Math_CheckCollisionRect2D(Rect2D r1, Rect2D r);
  Rect Math_Rect2DToRect(Rect2D r, float d);
  char Math_RectIsCompletelyInside(Rect r1, Rect r);
  Cube Math_Cube(Vec3 pos, float width, float height, float depth);
@@ -171,6 +172,13 @@ void Math_InverseMatrixNxN(float *mat, int n);
 float Math_Determinant(float *mat, int n);
 void Math_Mat4ToMat3(float *mat4, float *mat3);
 void Math_InverseMatrixMat3(float *mat3);
+void Math_SkewSymetricMat3(Vec3 v, float *matrix);
+
+Vec3 Math_MatrixMultMat3(Vec3 vec, float *matrix);
+Vec3 Math_MatrixMult(Vec3,float*);
+Vec4 Math_MatrixMult4(Vec4,float*);
+
+void Math_Matrix6x6Set(float *m, float *m1, float *m2, float *m3, float *m4);
 void Math_TransposeMatrix(float *matrix, int n);
 Quat Math_MatrixToQuat(float *matrix);
 void Math_OuterProduct(Vec3 vec, Vec3 trans, float *matrix);
@@ -183,8 +191,6 @@ void Math_LookAt(float *ret, Vec3 eye, Vec3 center, Vec3 up );
 void Math_RotateAroundAxis(Vec3 p, float a, float *);
 void Math_MatrixFromQuat(Quat q, float*);
 Quat Math_Slerp(Quat q, Quat q2, float);
-Vec3 Math_MatrixMult(Vec3,float*);
-Vec4 Math_MatrixMult4(Vec4,float*);
 void Math_CopyMatrix(float *m1, float *m2);
 void Math_InverseMatrix(float *m);
 void Math_ScaleMatrix(float *matrix, int n, float amount);
@@ -192,9 +198,10 @@ void Math_ScalingMatrixXYZ(float *matrix, Vec3 amount);
 Vec3 Math_Rotate(Vec3 pos, Vec3 angles);
 void Math_TranslateMatrix(float *matrix, Vec3 vector);
 void Math_ScalingMatrix(float *matrix, float amount);
+
 void Math_MatrixMatrixAdd(float *matrix, float *m0, float *m1);
 void Math_MatrixMatrixSub(float *matrix, float *m0, float *m1);
-Vec3 Math_QuatToAxisAngle(Quat quat, float *angle);
+Vec3 Math_QuatToAxisAngle(Quat quat ,float *angle);
 Vec3 Math_AxisAngleToEuler(Vec3 axis, float angle) ;
 Vec3 Math_QuatToEuler(Quat quat);
 Quat Math_EulerToQuat(const Vec3 euler);

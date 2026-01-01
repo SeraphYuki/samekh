@@ -17,6 +17,7 @@ void World_UpdateObjects();
 void World_UpdateObjectInOctree(Object *obj);
 void World_RemoveObjectFromOctree(Object *box);
 void World_DrawLines(Vec3 *lines, int num);
+void World_DrawLinesColor(Vec3 *lines, int num, Vec4 color);
 void World_Render(char drawBoundingBoxes);
 void World_ResolveCollisions(Object *obj, BoundingBox *box);
 Vec3 World_GetTopLeft();

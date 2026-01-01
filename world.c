@@ -82,23 +82,23 @@ void World_InitOctree(Vec3 pos, float size, float octantWidth){
 	OctreeLeaf_Init(octree, 0, divisions);
 
     glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
+	  glBindVertexArray(vao);
 
     GLint posLoc = glGetAttribLocation(Shaders_GetProgram(TEXTURELESS_SHADER),SHADERS_POSITION_ATTRIB);
-    GLint colorLoc = glGetAttribLocation(Shaders_GetProgram(TEXTURELESS_SHADER), SHADERS_COLOR_ATTRIB);
+	  GLint colorLoc = glGetAttribLocation(Shaders_GetProgram(TEXTURELESS_SHADER), SHADERS_COLOR_ATTRIB);
 
     if(posLoc != -1){
-        glGenBuffers(1, &posVbo);
-        glBindBuffer(GL_ARRAY_BUFFER,posVbo);
-        glEnableVertexAttribArray(posLoc);
-        glVertexAttribPointer(posLoc, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    }
-    if(colorLoc != -1){
-        glGenBuffers(1, &colorVbo);
-        glBindBuffer(GL_ARRAY_BUFFER,colorVbo);
-        glEnableVertexAttribArray(colorLoc);
-        glVertexAttribPointer(colorLoc, 4, GL_FLOAT, GL_FALSE, 0, 0);
-    }
+	      glGenBuffers(1, &posVbo);
+	      glBindBuffer(GL_ARRAY_BUFFER,posVbo);
+	      glEnableVertexAttribArray(posLoc);
+	      glVertexAttribPointer(posLoc, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	  }
+	  if(colorLoc != -1){
+	      glGenBuffers(1, &colorVbo);
+	      glBindBuffer(GL_ARRAY_BUFFER,colorVbo);
+	      glEnableVertexAttribArray(colorLoc);
+	      glVertexAttribPointer(colorLoc, 4, GL_FLOAT, GL_FALSE, 0, 0);
+	  }
 
     glBindVertexArray(0);
 }
@@ -182,6 +182,38 @@ void World_DrawLines(Vec3 *lines, int num){
 
 	glBindVertexArray(0);
 }
+void World_DrawLinesColor(Vec3 *lines, int num, Vec4 color){
+
+	Shaders_UseProgram(TEXTURELESS_SHADER);
+	Shaders_SetUniformColor(color);
+
+	glBindVertexArray(vao);
+
+	Shaders_UpdateViewMatrix();
+	Shaders_UpdateModelMatrix();
+	Shaders_UpdateProjectionMatrix();
+
+	glLineWidth(1);
+
+	glBindBuffer(GL_ARRAY_BUFFER, posVbo);
+	glBufferData(GL_ARRAY_BUFFER, num*sizeof(Vec3), &lines[0], GL_STATIC_DRAW);
+
+	Vec4 *colors = (Vec4 *)malloc(num * sizeof(Vec4));
+
+	Vec4 white = (Vec4){1,1,1,1};
+	
+	int k;
+	for(k = 0; k < num; k++) colors[k] = white;
+
+	glBindBuffer(GL_ARRAY_BUFFER, colorVbo);
+	glBufferData(GL_ARRAY_BUFFER, num*sizeof(Vec4), &colors[0], GL_STATIC_DRAW);
+
+	glDrawArrays(GL_LINE_STRIP, 0, num);
+	
+	free(colors);
+
+	glBindVertexArray(0);
+}
 void World_DrawSkeleton(BoundingBox *bb){
 	Vec3 lines[18]; 
 	lines[0] = bb->points[0];
@@ -206,22 +238,22 @@ void World_DrawSkeleton(BoundingBox *bb){
 }
 void World_DrawSAT(BoundingBox *bb){
 	Vec3 lines[18]; 
-    // bb->points[0] = (Vec3){0, 1, 1};
-    // bb->points[1] = (Vec3){0, 0, 1};
-    // bb->points[2] = (Vec3){0, 1, 0};
-    // bb->points[3] = (Vec3){0, 0, 0};
-    // bb->points[4] = (Vec3){1, 1, 1};
-    // bb->points[5] = (Vec3){1, 0, 1};
-    // bb->points[6] = (Vec3){1, 1, 0};
-    // bb->points[7] = (Vec3){1, 0, 0};
-    // points[0] = (Vec3){0, 0, 0};
-    // points[1] = (Vec3){1, 0, 0};
-    // points[2] = (Vec3){1, 1, 0};
-    // points[3] = (Vec3){0, 1, 0};
-    // points[4] = (Vec3){0, 0, 1};
-    // points[5] = (Vec3){1, 0, 1};
-    // points[6] = (Vec3){1, 1, 1};
-    // points[7] = (Vec3){0, 1, 1};
+	  // bb->points[0] = (Vec3){0, 1, 1};
+	  // bb->points[1] = (Vec3){0, 0, 1};
+	  // bb->points[2] = (Vec3){0, 1, 0};
+	  // bb->points[3] = (Vec3){0, 0, 0};
+	  // bb->points[4] = (Vec3){1, 1, 1};
+	  // bb->points[5] = (Vec3){1, 0, 1};
+	  // bb->points[6] = (Vec3){1, 1, 0};
+	  // bb->points[7] = (Vec3){1, 0, 0};
+	  // points[0] = (Vec3){0, 0, 0};
+	  // points[1] = (Vec3){1, 0, 0};
+	  // points[2] = (Vec3){1, 1, 0};
+	  // points[3] = (Vec3){0, 1, 0};
+	  // points[4] = (Vec3){0, 0, 1};
+	  // points[5] = (Vec3){1, 0, 1};
+	  // points[6] = (Vec3){1, 1, 1};
+	  // points[7] = (Vec3){0, 1, 1};
 	lines[0] = bb->points[3];
 	lines[1] = bb->points[7];
 	lines[2] = bb->points[6];
@@ -249,34 +281,34 @@ void World_DrawCube(Cube r){
     Vec3 points[8];
 
     points[0] = (Vec3){r.x, r.y, r.z};
-    points[1] = (Vec3){r.x+r.w, r.y, r.z};
-    points[2] = (Vec3){r.x+r.w, r.y+r.h, r.z};
-    points[3] = (Vec3){r.x, r.y+r.h, r.z};
-    points[4] = (Vec3){r.x, r.y, r.z+r.d};
-    points[5] = (Vec3){r.x+r.w, r.y, r.z+r.d};
-    points[6] = (Vec3){r.x+r.w, r.y+r.h, r.z+r.d};
-    points[7] = (Vec3){r.x, r.y+r.h, r.z+r.d};
+	  points[1] = (Vec3){r.x+r.w, r.y, r.z};
+	  points[2] = (Vec3){r.x+r.w, r.y+r.h, r.z};
+	  points[3] = (Vec3){r.x, r.y+r.h, r.z};
+	  points[4] = (Vec3){r.x, r.y, r.z+r.d};
+	  points[5] = (Vec3){r.x+r.w, r.y, r.z+r.d};
+	  points[6] = (Vec3){r.x+r.w, r.y+r.h, r.z+r.d};
+	  points[7] = (Vec3){r.x, r.y+r.h, r.z+r.d};
 
 	Vec3 lines[18];	
 
     lines[0] = (Vec3){points[0].x, points[0].y, points[0].z};
-    lines[1] = (Vec3){points[1].x, points[1].y, points[1].z};
-    lines[2] = (Vec3){points[2].x, points[2].y, points[2].z};
-    lines[3] = (Vec3){points[3].x, points[3].y, points[3].z};
-    lines[4] = (Vec3){points[0].x, points[0].y, points[0].z};
-    lines[5] = (Vec3){points[4].x, points[4].y, points[4].z};
-    lines[6] = (Vec3){points[5].x, points[5].y, points[5].z};
-    lines[7] = (Vec3){points[6].x, points[6].y, points[6].z};
-    lines[8] = (Vec3){points[7].x, points[7].y, points[7].z};
-    lines[9] = (Vec3){points[4].x, points[4].y, points[4].z};
-    lines[10] = (Vec3){points[7].x, points[7].y, points[7].z};
-    lines[11] = (Vec3){points[3].x, points[3].y, points[3].z};
-    lines[12] = (Vec3){points[7].x, points[7].y, points[7].z};
-    lines[13] = (Vec3){points[6].x, points[6].y, points[6].z};
-    lines[14] = (Vec3){points[2].x, points[2].y, points[2].z};
-    lines[15] = (Vec3){points[6].x, points[6].y, points[6].z};
-    lines[16] = (Vec3){points[5].x, points[5].y, points[5].z};
-    lines[17] = (Vec3){points[1].x, points[1].y, points[1].z};
+	  lines[1] = (Vec3){points[1].x, points[1].y, points[1].z};
+	  lines[2] = (Vec3){points[2].x, points[2].y, points[2].z};
+	  lines[3] = (Vec3){points[3].x, points[3].y, points[3].z};
+	  lines[4] = (Vec3){points[0].x, points[0].y, points[0].z};
+	  lines[5] = (Vec3){points[4].x, points[4].y, points[4].z};
+	  lines[6] = (Vec3){points[5].x, points[5].y, points[5].z};
+	  lines[7] = (Vec3){points[6].x, points[6].y, points[6].z};
+	  lines[8] = (Vec3){points[7].x, points[7].y, points[7].z};
+	  lines[9] = (Vec3){points[4].x, points[4].y, points[4].z};
+	  lines[10] = (Vec3){points[7].x, points[7].y, points[7].z};
+	  lines[11] = (Vec3){points[3].x, points[3].y, points[3].z};
+	  lines[12] = (Vec3){points[7].x, points[7].y, points[7].z};
+	  lines[13] = (Vec3){points[6].x, points[6].y, points[6].z};
+	  lines[14] = (Vec3){points[2].x, points[2].y, points[2].z};
+	  lines[15] = (Vec3){points[6].x, points[6].y, points[6].z};
+	  lines[16] = (Vec3){points[5].x, points[5].y, points[5].z};
+	  lines[17] = (Vec3){points[1].x, points[1].y, points[1].z};
 
     World_DrawLines(lines, 18);
 }
@@ -367,7 +399,7 @@ void World_Render(char drawBoundingBoxes){
 		if(visibleObjects[k]->Draw != NULL){
 			visibleObjects[k]->Draw(visibleObjects[k]);
 		}
-    }
+	  }
 
 	if(drawBoundingBoxes){
 

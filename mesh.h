@@ -12,19 +12,25 @@
 #define MODEL_MAX_BOUNDING_BOXES 16
 
 typedef struct Bone Bone;
+typedef struct FigureTree_t FigureTree_t;
 struct Bone {
 	u8 				index;
 	u8 				nChildren;
 	Bone 			*parent;
+	FigureTree_t *tree;
 	Vec3 			pos;
 	Quat 			rot;
+	Vec3			 posDisplacement;
+	Vec3 			absPos;
+	Quat 			absRot;
+	Vec3 			linVel;
+	Vec3 			angVel;
 	Bone 			*children[BONE_MAX_CHILDREN];
 	float 			absMatrix[16];
 	float 			invBindMatrix[16];
 	Cube 			cube;
 	float 			damping;
 	float 			spring;
-	Vec3 			angVel;
 	Quat 			rotDisplacement;
 	Vec3  			points[8];
 	Vec3  			axes[3];
@@ -102,6 +108,6 @@ void Model_Load(Model *model, const char *path);
 void Model_DeleteTextures(Model *model);
 void Skeleton_BlendAnims(PlayingAnimation *anims, int nAnims, float dt);
 void Model_LoadCollisions(Model *model, const char *path);
-
+void Skeleton_UpdateVelocities(Skeleton *skeleton);
 
 #endif

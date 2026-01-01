@@ -2,8 +2,7 @@ CC=gcc
 
 # debugging on, source compiled into exe currently
 
-CFLAGS  = -Wall -g $(shell pkg-config --cflags freetype2) -
-m64
+CFLAGS  = -Wall -g $(shell pkg-config --cflags freetype2) -m64
 LFLAGS = -g
 
 # CFLAGS   = -m64 -pipe
