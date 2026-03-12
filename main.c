@@ -7,7 +7,7 @@
 #include "shaders.h"
 #include "object.h"
 #include "physics.h"
-// #include "skybox.h"
+#include "skybox.h"
 #define WINDOW_WIDTH 960 
 #define WINDOW_HEIGHT 544
 
@@ -17,7 +17,7 @@ static Animation cubeAnim;
 static Skeleton cubeSkel;
 static PlayingAnimation cubeAnims[1];
 
-// static Skybox skybox;
+ static Skybox skybox;
 
 static float mouseSensitivity = 0.001;
 static float moveSpeed = 0.005;
@@ -53,7 +53,8 @@ static void Update(){
 	      cubeAnims[0].into = cubeAnim.length/8;
 	}
 
-    cubeObj->bb.pos.y -= Window_GetDeltaTime() / 1000.0f;
+    cubeObj->bb.rot.y -= Window_GetDeltaTime() / 1000.0f;
+	 cubeObj->bb.pos.y -= Window_GetDeltaTime() / 1000.0f;
 	  if(cubeObj->bb.pos.y < 0){
 	      cubeObj->bb.pos.y = 0;
 	}
@@ -164,190 +165,188 @@ static void Focus(){
 
 static void DrawRigged(Object *obj){
 
+	Shaders_UseProgram(SKELETAL_ANIMATION_SHADER);
 
-	  Shaders_UseProgram(SKELETAL_ANIMATION_SHADER);
-	 
-	  Shaders_SetModelMatrix(obj->bb.matrix);
-	  Shaders_UpdateModelMatrix();
+	Shaders_SetModelMatrix(obj->bb.matrix);
+	Shaders_UpdateModelMatrix();
 
-    
-	  glUniform4fv(Shaders_GetBonesLocation(), obj->skeleton->nBones * 3, &obj->skeleton->matrices[0].x);
+	glUniform4fv(Shaders_GetBonesLocation(), obj->skeleton->nBones * 3, &obj->skeleton->matrices[0].x);
 
+	glActiveTexture(GL_TEXTURE0);
 
-	  glActiveTexture(GL_TEXTURE0);
-	  
-	  glBindVertexArray(obj->model->vao);
+	glBindVertexArray(obj->model->vao);
 
-    int curr = 0;
+	int curr = 0;
 
 
-	  int k;
-	  for(k = 0; k < obj->model->nMaterials; k++){
+	int k;
+	for(k = 0; k < obj->model->nMaterials; k++){
 
-        glBindTexture(GL_TEXTURE_2D, obj->model->materials[k].texture);
-	    glUniform4fv(Shaders_GetDiffuseLocation(), 1, (float *)&obj->model->materials[k].diffuse);
-	    glUniform4fv(Shaders_GetSpecularLocation(), 1, (float *)&obj->model->materials[k].specular);
+		glBindTexture(GL_TEXTURE_2D, obj->model->materials[k].texture);
+		glUniform4fv(Shaders_GetDiffuseLocation(), 1, (float *)&obj->model->materials[k].diffuse);
+		glUniform4fv(Shaders_GetSpecularLocation(), 1, (float *)&obj->model->materials[k].specular);
 
-        glDrawElements(GL_TRIANGLES, obj->model->nElements[k], GL_UNSIGNED_INT, (void *)(curr * sizeof(GLuint)));
-	      curr += obj->model->nElements[k];
-	  }
+		glDrawElements(GL_TRIANGLES, obj->model->nElements[k], GL_UNSIGNED_INT, (void *)(curr * sizeof(GLuint)));
+		curr += obj->model->nElements[k];
+	}
 
-    glBindVertexArray(0);
+	glBindVertexArray(0);
 }
+
 static void DrawModel(Object *obj){
-
-    Shaders_UseProgram(TEXTURED_SHADER);
-
-    Shaders_SetModelMatrix(obj->bb.matrix);
-	  Shaders_UpdateModelMatrix();
-	  
-	  glActiveTexture(GL_TEXTURE0);
 
     glBindVertexArray(obj->model->vao);
 
     int curr = 0;
 
-
 	  int k;
 	  for(k = 0; k < obj->model->nMaterials; k++){
-	      glBindTexture(GL_TEXTURE_2D, obj->model->materials[k].texture);
-	    glUniform4fv(Shaders_GetDiffuseLocation(), 1, (float *)&obj->model->materials[k].diffuse);
-	    glUniform4fv(Shaders_GetSpecularLocation(), 1, (float *)&obj->model->materials[k].specular);
-	      glDrawElements(GL_TRIANGLES, obj->model->nElements[k], GL_UNSIGNED_INT, (void *)(curr * sizeof(GLuint)));
-	      curr += obj->model->nElements[k];
+		if(obj->model->materials[k].texture)
+			Shaders_UseProgram(TEXTURED_SHADER);
+		else
+			Shaders_UseProgram(TEXTURELESS_SHADER);
+
+		Shaders_SetModelMatrix(obj->bb.matrix);
+		Shaders_UpdateModelMatrix();
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, obj->model->materials[k].texture);
+		glUniform4fv(Shaders_GetDiffuseLocation(), 1, (float *)&obj->model->materials[k].diffuse);
+		glUniform4fv(Shaders_GetSpecularLocation(), 1, (float *)&obj->model->materials[k].specular);
+		glDrawElements(GL_TRIANGLES, obj->model->nElements[k], GL_UNSIGNED_INT, (void *)(curr * sizeof(GLuint)));
+		curr += obj->model->nElements[k];
 	}
 
     glBindVertexArray(0);
 }
 static char Draw(){
+	float persp[16];
 
+	Vec3 forward = Math_Rotate((Vec3){0,0,-1}, (Vec3){-rotation.y, -rotation.x, 0});
+	float view[16];
+	Math_LookAt(view, position, Math_Vec3AddVec3(position, forward), (Vec3){0,1,0});
+	Shaders_SetViewMatrix(view);
 
-	  float persp[16];
+	Math_Perspective(persp, 60.0f*(3.1415/180), (float)1920 / (float)1080, 0.1f, 50.0f);
+	Shaders_SetProjectionMatrix(persp);
 
-    Vec3 forward = Math_Rotate((Vec3){0,0,-1}, (Vec3){-rotation.y, -rotation.x, 0});
-	  float view[16];
-	  Math_LookAt(view, position, Math_Vec3AddVec3(position, forward), (Vec3){0,1,0});
-	  Shaders_SetViewMatrix(view);
-
-    Math_Perspective(persp, 60.0f*(3.1415/180), (float)1920 / (float)1080, 0.1f, 50.0f);
-	  Shaders_SetProjectionMatrix(persp);
-
-    Shaders_UseProgram(SKELETAL_ANIMATION_SHADER);
-	  Shaders_UpdateViewMatrix();
-	  Shaders_UpdateProjectionMatrix();
-	  Shaders_UseProgram(TEXTURED_SHADER);
-	  Shaders_UpdateViewMatrix();
-	  Shaders_UpdateProjectionMatrix();
+	Shaders_UseProgram(SKELETAL_ANIMATION_SHADER);
+	Shaders_UpdateViewMatrix();
+	Shaders_UpdateProjectionMatrix();
+	Shaders_UseProgram(TEXTURED_SHADER);
+	Shaders_UpdateViewMatrix();
+	Shaders_UpdateProjectionMatrix();
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glCullFace(GL_BACK);
-	  float idenity[16];
-	  Shaders_UseProgram(TEXTURED_SHADER);
-	  
-	  Math_Identity(idenity);
-	  Shaders_SetModelMatrix(idenity);
+	glCullFace(GL_BACK);
+	float idenity[16];
+	Shaders_UseProgram(TEXTURED_SHADER);
+
+	Math_Identity(idenity);
+	Shaders_SetModelMatrix(idenity);
 	int k;
 	for(k = 0; k < cubeObj->skelBb.numChildren; k++){
 		World_DrawSkeleton(&cubeObj->skelBb.children[k]);
 	}
-	  World_Render(1);
-	  return 1;
+	World_Render(1);
+	Skybox_Draw(&skybox);
+	return 1;
 }
 
 static void OnResize(){
-//         Thoth_Render(thoth); stencil buffer/framebuffer access todo
-
+	  //Thoth_Render(thoth); stencil buffer/framebuffer access todo
 }
-//
+
 
 
 int main(int argc, char **argv){
 
 
-	  Window_Open("Editor", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,WINDOW_WIDTH, WINDOW_HEIGHT, 0);
+	Window_Open("Editor", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,WINDOW_WIDTH, WINDOW_HEIGHT, 0);
 
 
-	  glEnable(GL_BLEND);
-	  glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-	  glEnable(GL_DEPTH_TEST);
-	  glDepthFunc(GL_LESS);
-	  glEnable(GL_CULL_FACE);
-	  glCullFace(GL_BACK);
-	  Memory_Init((0x01 << 20) * 64);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LESS);
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
+	Memory_Init((0x01 << 20) * 64);
 
-    glClearColor(0,0,0,1);
-	  Shaders_Init();
+	glClearColor(0,0,0,1);
+	Shaders_Init();
 
-    World_InitOctree((Vec3){-100, -100, -100}, 200, 25);
+	World_InitOctree((Vec3){-100, -100, -100}, 200, 25);
 
-    glClearColor(0,0,0,1);
+	glClearColor(0,0,0,1);
 
 
-	  float persp[16], view[16], model[16];
-	  Math_Perspective(persp, 60.0f*(3.1415/180), (float)1920 / (float)1080, 0.1f, 100.0f);
-	  Math_LookAt(view, (Vec3){0,0,-5}, (Vec3){0,0,0}, (Vec3){0,1,0});
-	  Math_Identity(model);
-	  Shaders_UseProgram(SKELETAL_ANIMATION_SHADER);
-	  Shaders_SetProjectionMatrix(persp);
-	  Shaders_UpdateProjectionMatrix();
-	  Shaders_SetModelMatrix(model);
-	  Shaders_UpdateModelMatrix();
-	  Shaders_SetViewMatrix(view);
-	  Shaders_UpdateViewMatrix();
-	  Shaders_UpdateProjectionMatrix();
-	  memset(&cubeSkel, 0, sizeof(Skeleton));
+	float persp[16], view[16], model[16];
+	Math_Perspective(persp, 60.0f*(3.1415/180), (float)1920 / (float)1080, 0.1f, 100.0f);
+	Math_LookAt(view, (Vec3){0,0,-5}, (Vec3){0,0,0}, (Vec3){0,1,0});
+	Math_Identity(model);
+	Shaders_UseProgram(SKELETAL_ANIMATION_SHADER);
+	Shaders_SetProjectionMatrix(persp);
+	Shaders_UpdateProjectionMatrix();
+	Shaders_SetModelMatrix(model);
+	Shaders_UpdateModelMatrix();
+	Shaders_SetViewMatrix(view);
+	Shaders_UpdateViewMatrix();
+	Shaders_UpdateProjectionMatrix();
+	memset(&cubeSkel, 0, sizeof(Skeleton));
 
-    cubeObj = Object_Create();
+	skybox = Skybox_Create(30, (Vec3){0,0,0}, "Resources/skybox.png");
+
+	cubeObj = Object_Create();
 	cubeObj->skeleton = &cubeSkel;
 	memcpy(cubeObj->matrix, Math_Identity, sizeof(Math_Identity));
-	  RiggedModel_Load(&cubeModel, &cubeSkel, "Resources/figure.yuk");
-	  memset(&cubeAnim, 0, sizeof(Animation));
-	  Animation_Load(&cubeAnim, "Resources/figure_ArmatureAction.anm");
+	RiggedModel_Load(&cubeModel, &cubeSkel, "Resources/figure.yuk");
+	memset(&cubeAnim, 0, sizeof(Animation));
+	Animation_Load(&cubeAnim, "Resources/figure_ArmatureAction.anm");
 
 	Object_SetModel(cubeObj, &cubeModel);
-	  cubeObj->Draw = DrawRigged;
-	  cubeObj->AddUser(cubeObj);
-	  cubeObj->bb.pos.y = 1;
-	  cubeObj->bb.scale = (Vec3){0.1,0.1,0.1};
-	  cubeObj->bb.rot = (Vec3){0,0,0};
-	  World_UpdateObjectInOctree(cubeObj);
+	cubeObj->Draw = DrawRigged;
+	cubeObj->AddUser(cubeObj);
+	cubeObj->bb.pos.y = 1;
+	cubeObj->bb.scale = (Vec3){0.1,0.1,0.1};
+	cubeObj->bb.rot = (Vec3){0,3.14/2,0};
+	World_UpdateObjectInOctree(cubeObj);
 
 	groundObj = Object_Create();
-	  Model_Load(&groundModel, "Resources/ground.yuk");
-	  Model_LoadCollisions(&groundModel, "Resources/ground.col");
+	Model_Load(&groundModel, "Resources/ground.yuk");
+	Model_LoadCollisions(&groundModel, "Resources/ground.col");
 	Object_SetModel(groundObj, &groundModel);
-	  groundObj->Draw = DrawModel;
-	  groundObj->AddUser(groundObj);
-	  World_UpdateObjectInOctree(groundObj);
+	groundObj->Draw = DrawModel;
+	groundObj->AddUser(groundObj);
+	World_UpdateObjectInOctree(groundObj);
 	throwObj = Object_Create();
-	  Model_Load(&throwModel, "Resources/cube.yuk");
+	Model_Load(&throwModel, "Resources/cube.yuk");
 	Object_SetModel(throwObj, &throwModel);
-	  throwObj->Draw = DrawModel;
+	throwObj->Draw = DrawModel;
 	throwObj->bb.pos = position;
-	  throwObj->AddUser(throwObj);
-	  World_UpdateObjectInOctree(throwObj);
+	throwObj->AddUser(throwObj);
+	World_UpdateObjectInOctree(throwObj);
 
-    cubeAnims[0] = (PlayingAnimation){
-	      .active = 1,
-	      .weight = 1,
-	      .into = 0,
-	      .anim = &cubeAnim,
-	  };
+	cubeAnims[0] = (PlayingAnimation){
+		.active = 1,
+		.weight = 1,
+		.into = 0,
+		.anim = &cubeAnim,
+	};
 
-    // thoth = Thoth_Create(WINDOW_WIDTH, WINDOW_HEIGHT );
-	  // Thoth_LoadFile(thoth, "main.c");
-	  // Thoth_Resize(thoth, 50, 50, WINDOW_WIDTH, WINDOW_HEIGHT);
+	// thoth = Thoth_Create(WINDOW_WIDTH, WINDOW_HEIGHT );
+	// Thoth_LoadFile(thoth, "main.c");
+	// Thoth_Resize(thoth, 50, 50, WINDOW_WIDTH, WINDOW_HEIGHT);
 
-    Window_MainLoop(Update, Event, Draw, Focus, OnResize, 1, 1);
+	Window_MainLoop(Update, Event, Draw, Focus, OnResize, 1, 1);
 
 
-	  // Thoth_Destroy(thoth);
+	// Thoth_Destroy(thoth);
 
 	World_Free();
-	  Shaders_Close();
-	  ImageLoader_Free();
+	Shaders_Close();
+	ImageLoader_Free();
+	Skybox_Free(&skybox);
 
-
-	  return 0;
+	return 0;
 }

@@ -76,6 +76,13 @@ static void CreateShader(struct Shader *shader, const char *vSource, const char 
     glLinkProgram(shader->program);
     glUseProgram(shader->program);
 
+    glUniform1i(glGetUniformLocation(shader->program, "tex"), 0);
+    glUniform1i(glGetUniformLocation(shader->program, "shadowMap"), 1);
+    glUniform1i(glGetUniformLocation(shader->program, "colorMap"), 2);
+    glUniform1i(glGetUniformLocation(shader->program, "depthMap"), 3);
+    glUniform1i(glGetUniformLocation(shader->program, "positionMap"), 4);
+    glUniform1i(glGetUniformLocation(shader->program, "normalMap"), 5);
+    glUniform1i(glGetUniformLocation(shader->program, "fragAttribMap"), 6);
     shader->lightInvDirLoc = glGetUniformLocation(shader->program, "invLightDir");
     shader->modelLoc = glGetUniformLocation(shader->program, "model");
     shader->projLoc = glGetUniformLocation(shader->program, "proj");
@@ -97,12 +104,6 @@ static void CreateShader(struct Shader *shader, const char *vSource, const char 
     shader->bonesLoc = glGetUniformLocation(shader->program, "bones");
     shader->specularLoc = glGetUniformLocation(shader->program, "specular");
     shader->diffuseLoc = glGetUniformLocation(shader->program, "diffuse");
-    glUniform1i(glGetUniformLocation(shader->program, "shadowMap"), 1);
-    glUniform1i(glGetUniformLocation(shader->program, "colorMap"), 2);
-    glUniform1i(glGetUniformLocation(shader->program, "depthMap"), 3);
-    glUniform1i(glGetUniformLocation(shader->program, "positionMap"), 4);
-    glUniform1i(glGetUniformLocation(shader->program, "normalMap"), 5);
-    glUniform1i(glGetUniformLocation(shader->program, "fragAttribMap"), 6);
 }
 
 static const char *textureless2DFSource = "#version 120\n"
@@ -262,10 +263,22 @@ static const char *texturelessFSource = "#version 120\n"
 "uniform vec4 uniColor = vec4(1,1,1,1);\n"
 "uniform vec4 specular = vec4(0,0,0,0);\n"
 "uniform vec4 diffuse = vec4(1,1,1,1);\n"
-
+"uniform sampler2D tex;\n"
+"varying vec2 TexCoord;\n"
 "void main(){\n"
 
-    "gl_FragColor = diffuse * uniColor;"    
+    "gl_FragColor =  diffuse * uniColor;\n"    
+"}";
+
+static const char *texturedFSource = "#version 120\n"
+"uniform vec4 uniColor = vec4(1,1,1,1);\n"
+"uniform vec4 specular = vec4(0,0,0,0);\n"
+"uniform vec4 diffuse = vec4(1,1,1,1);\n"
+"uniform sampler2D tex;\n"
+"varying vec2 TexCoord;\n"
+"void main(){\n"
+
+    "gl_FragColor =  texture2D(tex, TexCoord) * diffuse * uniColor;\n"    
 "}";
 
 static const char *texturedVSource = "#version 120\n"
@@ -692,8 +705,8 @@ static struct {
     const char **fSource;
 } sources[NUM_SHADERS] = {
     { &texturelessVSource, &texturelessFSource },
-    { &texturedVSource, &texturelessFSource },
-    { &skeletalVSource, &texturelessFSource },
+    { &texturedVSource, &texturedFSource },
+    { &skeletalVSource, &texturedFSource },
 };
 
 void Shaders_Init(){

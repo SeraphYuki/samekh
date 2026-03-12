@@ -8,14 +8,15 @@
 #include "image_loader.h"
 
 void Skybox_Draw(Skybox *skybox){
-	
+
+	glDisable(GL_CULL_FACE);	
 	glDepthMask(GL_FALSE);
 
 	Shaders_UseProgram(TEXTURED_SHADER);
 
     Shaders_UpdateProjectionMatrix();
-    Shaders_UpdateViewMatrix();
-    Shaders_UpdateModelMatrix();
+	 Shaders_UpdateViewMatrix();
+	 Shaders_UpdateModelMatrix();
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, skybox->img.glTexture);
@@ -26,8 +27,8 @@ void Skybox_Draw(Skybox *skybox){
 	Shaders_UpdateModelMatrix();
 
 	glBindVertexArray(skybox->vao);
-    glDrawArrays(GL_TRIANGLES, 0, 36);
-
+	 glDrawArrays(GL_TRIANGLES, 0, 36);
+	glEnable(GL_CULL_FACE);	
 	glDepthMask(GL_TRUE);
 }
 
@@ -48,7 +49,7 @@ Skybox Skybox_Create(float size, Vec3 pos, const char *texturePath){
 	glGenBuffers(1, &ret.uvVbo);
 
     int posAttrib = glGetAttribLocation(Shaders_GetProgram(TEXTURED_SHADER), SHADERS_POSITION_ATTRIB);
-    int uvAttrib = glGetAttribLocation(Shaders_GetProgram(TEXTURED_SHADER), SHADERS_COORD_ATTRIB);
+	 int uvAttrib = glGetAttribLocation(Shaders_GetProgram(TEXTURED_SHADER), SHADERS_COORD_ATTRIB);
 
 	Vec3 verts[36] = {
 	    { -0.5f, -0.5f, -0.5f }, 
@@ -147,15 +148,15 @@ Skybox Skybox_Create(float size, Vec3 pos, const char *texturePath){
 	glBindVertexArray(ret.vao);
 
     glBindBuffer(GL_ARRAY_BUFFER,ret.posVbo);
-    glEnableVertexAttribArray(posAttrib);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(verts), &verts[0].x, GL_STATIC_DRAW);
-    glVertexAttribPointer( posAttrib, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	 glEnableVertexAttribArray(posAttrib);
+	 glBufferData(GL_ARRAY_BUFFER, sizeof(verts), &verts[0].x, GL_STATIC_DRAW);
+	 glVertexAttribPointer( posAttrib, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
 
-    glBindBuffer(GL_ARRAY_BUFFER,ret.uvVbo);
-    glEnableVertexAttribArray(uvAttrib);
-    glVertexAttribPointer( uvAttrib, 2, GL_FLOAT, GL_FALSE, 0, 0);
-    glBufferData(GL_ARRAY_BUFFER,sizeof(coords), &coords[0].x, GL_STATIC_DRAW);
+	 glBindBuffer(GL_ARRAY_BUFFER,ret.uvVbo);
+	 glEnableVertexAttribArray(uvAttrib);
+	 glVertexAttribPointer( uvAttrib, 2, GL_FLOAT, GL_FALSE, 0, 0);
+	 glBufferData(GL_ARRAY_BUFFER,sizeof(coords), &coords[0].x, GL_STATIC_DRAW);
 
 	glBindVertexArray(0);
 

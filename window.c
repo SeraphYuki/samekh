@@ -5,9 +5,6 @@
 #include "SDL2/SDL_syswm.h"
 #include "window.h"
 #include <stdio.h>
-// #include <X11/Xatom.h>
-// #include <X11/Xlib.h>
-// #include <GL/glx.h>
 #include <math.h>
 
 static SDL_Window *window;
@@ -24,43 +21,43 @@ SDL_Window *Window_GetWindow(){ return window; }
 int Window_Open(const char *title, int posx, int posy, int width, int height, int fs){
 
     SDL_Init(SDL_INIT_GAMECONTROLLER);
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+	 SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	 SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+	 SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
 
     int k;
-    for(k = 0; k < SDL_NumJoysticks(); k++){
-        if(SDL_IsGameController(k)){
-            controller = SDL_GameControllerOpen(k);
-            if(controller) break;
-        }
-    }
+	 for(k = 0; k < SDL_NumJoysticks(); k++){
+	     if(SDL_IsGameController(k)){
+	         controller = SDL_GameControllerOpen(k);
+	         if(controller) break;
+	     }
+	 }
 
     window = SDL_CreateWindow(
-        title,
-        posx,
-        posy,
-        width,
-        height,
-        SDL_WINDOW_OPENGL | fs
-    );
-    context = SDL_GL_CreateContext(window);
-    SDL_GL_SetSwapInterval(0);
+	     title,
+	     posx,
+	     posy,
+	     width,
+	     height,
+	     SDL_WINDOW_OPENGL | fs
+	 );
+	 context = SDL_GL_CreateContext(window);
+	 SDL_GL_SetSwapInterval(0);
 
     glewExperimental = GL_TRUE;
-    if(glewInit() != GLEW_OK) {
-        printf("Glew Init Failed\n");
-        return 0;
-    }
+	 if(glewInit() != GLEW_OK) {
+	     printf("Glew Init Failed\n");
+	     return 0;
+	 }
 
     windowSize.x = width;
-    windowSize.y = height;
-    if(viewportSize.x <= 0) viewportSize.x = width;
-    if(viewportSize.y <= 0) viewportSize.y = height;
+	 windowSize.y = height;
+	 if(viewportSize.x <= 0) viewportSize.x = width;
+	 if(viewportSize.y <= 0) viewportSize.y = height;
 
     SDL_SetRelativeMouseMode(1);
-    SDL_ShowCursor(0);
-    SDL_WarpMouseInWindow(window, windowSize.x/2, windowSize.y/2);
+	 SDL_ShowCursor(0);
+	 SDL_WarpMouseInWindow(window, windowSize.x/2, windowSize.y/2);
 
     return 1;
 }
@@ -69,7 +66,7 @@ static void Window_CleanUp(){
 
     // if(controller) SDL_GameControllerClose(controller);
 	SDL_GL_DeleteContext(context);
-    SDL_DestroyWindow(window);
+	 SDL_DestroyWindow(window);
 	SDL_Quit();
 }
 
@@ -90,83 +87,83 @@ Vec2 Window_GetViewportSize(){return viewportSize; }
 Vec2 Window_GetWindowSize(){return windowSize; }
 
 int Window_SetViewportWidth(int w) {
-    if(w <= 0) return viewportSize.x;
-    if(w > windowSize.x) w = windowSize.x;
-    return viewportSize.x = originalViewportSize.x = w;
+	 if(w <= 0) return viewportSize.x;
+	 if(w > windowSize.x) w = windowSize.x;
+	 return viewportSize.x = originalViewportSize.x = w;
 }
 
 int Window_SetViewportHeight(int h) {
-    if(h <= 0) return viewportSize.y;
-    if(h > windowSize.y) h = windowSize.y;
-    return viewportSize.y = originalViewportSize.y = h;
+	 if(h <= 0) return viewportSize.y;
+	 if(h > windowSize.y) h = windowSize.y;
+	 return viewportSize.y = originalViewportSize.y = h;
 }
 
 void Window_MainLoop(void (*Update)(), void (*Event)(SDL_Event ), char (*Draw)(), void (*Focused)(),  void (*OnResize)(),
-    int display_fps, int stretch){
+	 int display_fps, int stretch){
 
     SDL_Event event;
-    int prevDisplayFPS = SDL_GetTicks();
-    int lastTime = SDL_GetTicks();;
-    int frames = 0;
+	 int prevDisplayFPS = SDL_GetTicks();
+	 int lastTime = SDL_GetTicks();;
+	 int frames = 0;
 
     breakLoop = 1;
 
     while(breakLoop){
 
         while(SDL_PollEvent(&event)){
-            
-            if(event.type == SDL_WINDOWEVENT){
-                
-                if(event.window.event == SDL_WINDOWEVENT_FOCUS_GAINED){
-                
-                    Focused();
-                
-                } else if(stretch && event.window.event == SDL_WINDOWEVENT_RESIZED){
+	         
+	         if(event.type == SDL_WINDOWEVENT){
+	             
+	             if(event.window.event == SDL_WINDOWEVENT_FOCUS_GAINED){
+	             
+	                 Focused();
+	             
+	             } else if(stretch && event.window.event == SDL_WINDOWEVENT_RESIZED){
 
                     windowSize.x = event.window.data1;
-                    windowSize.y = event.window.data2;
+	                 windowSize.y = event.window.data2;
 
                     glViewport(0,0,windowSize.x, windowSize.y);
 
                     OnResize();
-                }
-            }
-            else if(event.type == SDL_QUIT){
-                Window_Close();
-                break;
-            }
+	             }
+	         }
+	         else if(event.type == SDL_QUIT){
+	             Window_Close();
+	             break;
+	         }
 
             Event(event);
-        }
+	     }
 
         if(!breakLoop) break;
 
         int currTime = SDL_GetTicks();
-        deltaTime = currTime - lastTime;
+	     deltaTime = currTime - lastTime;
 
         if(deltaTime > (1.0/10) * 1000){
-            lastTime = currTime;
-            continue;
-        } 
+	         lastTime = currTime;
+	         continue;
+	     } 
 
         if(deltaTime > 0){
-            lastTime = currTime;
-            Update();
-        }
-    
-        if(Draw()) SDL_GL_SwapWindow(window);
+	         lastTime = currTime;
+	         Update();
+	     }
+	 
+	     if(Draw()) SDL_GL_SwapWindow(window);
 
         frames++;
 
         if(display_fps){
-            int currTime = SDL_GetTicks();
-            if(currTime - prevDisplayFPS > 1000 ){
-                printf("%f ms\n", ((float)currTime - (float)prevDisplayFPS) / frames );
-                printf("%i fps\n", frames );
-                prevDisplayFPS = currTime;
-                frames = 0;
-            }
-        }
-    }
+	         int currTime = SDL_GetTicks();
+	         if(currTime - prevDisplayFPS > 1000 ){
+	             printf("%f ms\n", ((float)currTime - (float)prevDisplayFPS) / frames );
+	             printf("%i fps\n", frames );
+	             prevDisplayFPS = currTime;
+	             frames = 0;
+	         }
+	     }
+	 }
 }
 

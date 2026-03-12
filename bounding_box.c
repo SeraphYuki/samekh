@@ -279,7 +279,7 @@ int BoundingBox_ResolveCollision(Object *obj1, BoundingBox *bb, Object *obj2, Bo
 
 	Vec3 axis;
 	float overlap = 0;
-	if(BoundingBox_IsSAT(bb) || BoundingBox_IsSAT(bb2)){
+	if((BoundingBox_IsSAT(bb) || BoundingBox_IsSAT(bb2))){
 		if(!BoundingBox_SATCollision(bb, bb2, &overlap, &axis)){
 			return ret;	
 		}
@@ -382,7 +382,7 @@ void BoundingBox_UpdatePoints(BoundingBox *bb){
 }
 
 int BoundingBox_IsSAT(BoundingBox *bb){
-	if(bb->rot.x == 0 && bb->rot.y == 0 && bb->rot.z == 0){
+	if((bb->rot.x == 0 && bb->rot.y == 0 && bb->rot.z == 0) || bb->noCollisions != 0){
 		return 0;
 	}
 	return 1;
